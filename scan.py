@@ -17,4 +17,5 @@ while True:
     if (a>29):
         break
 video.release()
+# bjwdjvfwv
 cv2.destroyAllWindows()
