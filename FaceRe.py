@@ -16,7 +16,7 @@ while True:
         cv2.rectangle(frame, (x,y),(x+w,y+h),(0,255,0),2)
         id, conf = recognizer.predict(abu[y:y+h,x:x+w])
         if (id==1):
-            id = 'Gabriel'
+            id = 'Akila'
         elif (id==2):
             id = 'Nanta'
         cv2.putText(frame,str(id),(x+40,y-10), cv2.FONT_HERSHEY_DUPLEX,1,(0,255,0))

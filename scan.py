@@ -1,20 +1,54 @@
-import cv2, time
+import cv2
+
+# Menginisialisasi webcam dan detektor wajah
 camera = 0
 video = cv2.VideoCapture(camera, cv2.CAP_DSHOW)
 faceDeteksi = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
-id = input ('Masukan id : ')
+
+# Meminta input ID pengguna
+id = input('Masukan id : ')
 a = 0
+
 while True:
-    a = a+1
+    a += 1
+    # Membaca frame dari video
     check, frame = video.read()
+    
+    # Konversi ke grayscale
     abu = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    wajah = faceDeteksi.detectMultiScale(abu,1.3,5)
-    for (x,y,w,h) in wajah:
-        cv2.imwrite('DataSet/User.'+str(id)+'.'+str(a)+'.jpg',abu[y:y+h,x:x+w])
-        cv2.rectangle(frame, (x,y),(x+w,y+h),(0,255,0),2)
-    cv2.imshow ("Face Recognition", frame)
+    
+    # Tampilkan gambar grayscale asli
+    cv2.imshow("Original Gray Image", abu)
+    
+    # Terapkan histogram equalization
+    abu_equalized = cv2.equalizeHist(abu)
+
+        # Terapkan Gaussian filter untuk mengurangi noise
+    abu_filtered = cv2.GaussianBlur(abu_equalized, (5, 5), 0)
+    
+    # Tampilkan gambar setelah histogram equalization
+    cv2.imshow("Equalized Image", abu_equalized)
+    
+    # Deteksi wajah pada gambar yang telah di-equalize
+    wajah = faceDeteksi.detectMultiScale(abu_equalized, 1.3, 5)
+    
+    # Menampilkan wajah yang terdeteksi dan menyimpannya
+    for (x, y, w, h) in wajah:
+        # Simpan gambar wajah yang telah di-equalize
+        cv2.imwrite('DataSet/User.' + str(id) + '.' + str(a) + '.jpg', abu_equalized[y:y + h, x:x + w])
+        # Membuat kotak hijau di sekitar wajah yang terdeteksi
+        cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
+    
+    # Tampilkan frame dengan kotak deteksi wajah
+    cv2.imshow("Face Recognition", frame)
+    
+    # Tombol untuk keluar (tekan tombol apa saja untuk keluar)
     key = cv2.waitKey(1)
-    if (a>29):
+    
+    # Berhenti setelah menyimpan 30 gambar
+    if a > 129:
         break
+
+# Melepaskan webcam dan menutup semua jendela
 video.release()
 cv2.destroyAllWindows()
