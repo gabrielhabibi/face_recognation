@@ -1,28 +1,43 @@
-import cv2, time
-import os
-from PIL import Image
+import cv2
+import tensorflow as tf
+import numpy as np
+import json
+
+# Load model CNN yang sudah dilatih
+model = tf.keras.models.load_model('face_recognition_model_cnn.h5')
+
+# Load label dari file JSON
+with open('label_map.json', 'r') as f:
+    labels = json.load(f)
+
+# Inisialisasi Video Capture
 camera = 0
 video = cv2.VideoCapture(camera, cv2.CAP_DSHOW)
 faceDeteksi = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
-recognizer = cv2.face.LBPHFaceRecognizer_create()
-recognizer.read('DataSet/Training.xml')
-a = 0
+
 while True:
-    a = a+1
     check, frame = video.read()
     abu = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    wajah = faceDeteksi.detectMultiScale(abu,1.3,5)
-    for (x,y,w,h) in wajah:
-        cv2.rectangle(frame, (x,y),(x+w,y+h),(0,255,0),2)
-        id, conf = recognizer.predict(abu[y:y+h,x:x+w])
-        if (id==1):
-            id = 'Akila'
-        elif (id==2):
-            id = 'Nanta'
-        cv2.putText(frame,str(id),(x+40,y-10), cv2.FONT_HERSHEY_DUPLEX,1,(0,255,0))
-    cv2.imshow ("Face Recognition", frame)
+    wajah = faceDeteksi.detectMultiScale(abu, 1.3, 5)
+    for (x, y, w, h) in wajah:
+        # Ekstraksi wajah dan ubah ukurannya agar sesuai dengan input model CNN
+        face_img = frame[y:y+h, x:x+w]
+        face_img = cv2.resize(face_img, (128, 128))
+        face_img = np.expand_dims(face_img, axis=0) / 255.0  # Normalisasi
+
+        # Prediksi wajah
+        prediction = model.predict(face_img)
+        id = str(np.argmax(prediction[0]) + 1)  # Memulai ID dari 1
+        label = labels.get(id, "Unknown")
+
+        # Tampilkan prediksi
+        cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
+        cv2.putText(frame, str(label), (x + 40, y - 10), cv2.FONT_HERSHEY_DUPLEX, 1, (0, 255, 0))
+
+    cv2.imshow("Face Recognition", frame)
     key = cv2.waitKey(1)
     if key == ord('a'):
         break
+
 video.release()
 cv2.destroyAllWindows()
