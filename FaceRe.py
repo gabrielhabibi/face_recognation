@@ -3,8 +3,8 @@ import tensorflow as tf
 import numpy as np
 import json
 
-# Load model VGG16 yang sudah dilatih
-model = tf.keras.models.load_model('face_recognition_model_vgg16.keras')
+# Load model yang sudah dilatih
+model = tf.keras.models.load_model('face_recognition_model_mobilenet.keras')
 
 # Load label dari file JSON
 with open('label_map.json', 'r') as f:
@@ -13,37 +13,62 @@ with open('label_map.json', 'r') as f:
 # Inisialisasi Video Capture
 camera = 0
 video = cv2.VideoCapture(camera, cv2.CAP_DSHOW)
-faceDeteksi = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
+face_cascade = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
+
+# Inisialisasi variabel untuk lock frame
+locked_label = "Unknown"
+locked_confidence = 0
+lock_frames = 0
+threshold_confidence = 0.75  # Threshold confidence untuk menampilkan label
+reset_lock_frames = 15  # Jumlah frame untuk reset lock
 
 while True:
     check, frame = video.read()
     if not check:
-        break  # Berhenti jika frame tidak berhasil diambil
+        break
+ 
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    faces = face_cascade.detectMultiScale(gray, 1.3, 5)
+    detected = False
 
-    wajah = faceDeteksi.detectMultiScale(frame, scaleFactor=1.3, minNeighbors=5, minSize=(30, 30))
-    for (x, y, w, h) in wajah:
-        # Ekstraksi wajah dan ubah ukurannya agar sesuai dengan input model VGG16
+    for (x, y, w, h) in faces:
         face_img = frame[y:y+h, x:x+w]
-        face_img = cv2.resize(face_img, (128, 128))
-        face_img = np.expand_dims(face_img, axis=0) / 255.0  # Normalisasi
+        face_img = cv2.resize(face_img, (224, 224))
+        face_img = np.expand_dims(face_img, axis=0) / 255.0
 
-        # Prediksi wajah
         prediction = model.predict(face_img)
-        confidence = np.max(prediction[0])  # Ambil confidence tertinggi
+        confidence = np.max(prediction[0])
+        id = str(np.argmax(prediction[0]) + 1)
+        current_label = labels.get(id, "Unknown")
 
-        if confidence > 0.8:  # Threshold confidence
-            id = str(np.argmax(prediction[0]) + 1)  # Memulai ID dari 1
-            label = labels.get(id, "Unknown")
+        # Jika confidence tidak cukup, tetap tampilkan "Unknown"
+        if confidence < threshold_confidence:
+            locked_label = "Unknown"
+            locked_confidence = confidence
+            lock_frames = reset_lock_frames
         else:
-            label = "Unknown"
+            # Update label yang terkunci jika memenuhi syarat
+            if (current_label != locked_label and confidence > locked_confidence * 1.05) or lock_frames <= 0:
+                locked_label = current_label
+                locked_confidence = confidence
+                lock_frames = reset_lock_frames  # Reset lock frame
+            detected = True
 
-        # Tampilkan prediksi dengan kotak hijau dan teks label
+        # Tampilkan deteksi pada frame
         cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
-        cv2.putText(frame, str(label), (x, y - 10), cv2.FONT_HERSHEY_DUPLEX, 1, (0, 255, 0), 2)
+        cv2.putText(frame, f"{locked_label} ({locked_confidence*100:.2f}%)", (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+
+    # Kurangi lock_frames jika tidak ada wajah yang terdeteksi
+    if not detected:
+        lock_frames -= 1
+        if lock_frames <= -reset_lock_frames:
+            locked_label = "Unknown"
+            locked_confidence = 0
+            lock_frames = 0
 
     cv2.imshow("Face Recognition", frame)
     key = cv2.waitKey(1)
-    if key == ord('a'):
+    if key == ord('q'):
         break
 
 video.release()

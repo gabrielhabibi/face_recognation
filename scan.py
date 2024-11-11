@@ -2,7 +2,6 @@ import cv2
 import os
 import glob
 
-
 # Path ke folder dataset
 dataset_path = 'DataSet'
 
@@ -31,7 +30,7 @@ def process_and_crop_faces(image, file_name_prefix, save_folder, start_count=0, 
     image = cv2.cvtColor(img_yuv, cv2.COLOR_YUV2BGR)
 
     # Terapkan median filter untuk mengurangi noise
-    image = cv2.medianBlur(image, 5)
+    image = cv2.medianBlur(image, 5) 
 
     # Deteksi wajah dalam gambar
     wajah = faceDeteksi.detectMultiScale(image, scaleFactor=1.3, minNeighbors=5, minSize=(30, 30))
@@ -50,12 +49,15 @@ def process_and_crop_faces(image, file_name_prefix, save_folder, start_count=0, 
 
         # Crop wajah dari gambar asli dengan padding
         cropped_face = image[y_start:y_end, x_start:x_end]
-                # Simpan gambar wajah yang sudah di-crop dengan nama yang sesuai
+        
+        # Resize ke (224, 224) agar konsisten dengan model
+        cropped_face = cv2.resize(cropped_face, (224, 224))
+
+        # Simpan gambar wajah yang sudah di-crop dengan nama yang sesuai
         file_name = f"{file_name_prefix}.{count}.jpg"
         file_path = os.path.join(save_folder, file_name)
         cv2.imwrite(file_path, cropped_face)
         print(f"Gambar wajah disimpan: {file_path}")
-
 
         count += 1
     return count
